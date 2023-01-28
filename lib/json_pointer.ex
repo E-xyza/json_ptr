@@ -1,0 +1,2 @@
+defmodule JsonPointer do
+end
