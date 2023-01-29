@@ -7,7 +7,15 @@ defmodule JsonPointer.MixProject do
       version: "0.1.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
+      package: [
+        description: "JSONPointer tools",
+        licenses: ["MIT"],
+        files: ~w(lib mix.exs README* LICENSE* VERSIONS*),
+        links: %{"GitHub" => "https://github.com/ityonemo/exonerate"}
+      ],
       deps: deps()
+      source_url: "https://github.com/E-xyza/json_pointer/",
+      docs: [main: "JsonPointer"]
     ]
   end
 
