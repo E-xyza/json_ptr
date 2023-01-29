@@ -19,17 +19,15 @@ defmodule JsonPointer do
   @doc """
   converts a uri to a JSONJsonPointer
 
-  elixir
-  #iex> JsonPointer.from_uri("/") # the root-only case
-  #[]
-  #iex> JsonPointer.from_uri("/foo/bar")
-  #["foo", "bar"]
-  #iex> JsonPointer.from_uri("/foo~0bar/baz")
+  ```elixir
+  iex> JsonPointer.from_uri("/") # the root-only case
+  []
+  iex> JsonPointer.from_uri("/foo/bar")
+  ["foo", "bar"]
+  iex> JsonPointer.from_uri("/foo~0bar/baz")
   ["foo~bar", "baz"]
-
-
-  #iex> JsonPointer.from_uri("/currency/%E2%82%AC")
-  #["currency", "€"]
+  iex> JsonPointer.from_uri("/currency/%E2%82%AC")
+  ["currency", "€"]
   ```
   """
   def from_uri("/" <> rest) do
@@ -46,13 +44,14 @@ defmodule JsonPointer do
   options
   - `:authority` prepends a context to the uri.
 
-  #iex> JsonPointer.to_uri(["foo", "bar"])
-  #"/foo/bar"
-  #iex> JsonPointer.to_uri(["foo~bar", "baz"])
-  #"/foo~0bar/baz"
-  #iex> JsonPointer.to_uri(["currency","€"])
-  #"/currency/%E2%82%AC"
-  #iex> JsonPointer.to_uri([], authority: "foo")
+  ```
+  iex> JsonPointer.to_uri(["foo", "bar"])
+  "/foo/bar"
+  iex> JsonPointer.to_uri(["foo~bar", "baz"])
+  "/foo~0bar/baz"
+  iex> JsonPointer.to_uri(["currency","€"])
+  "/currency/%E2%82%AC"
+  iex> JsonPointer.to_uri([], authority: "foo")
   "foo#/"
   ```
   """
@@ -76,10 +75,11 @@ defmodule JsonPointer do
   @doc """
   evaluates a JSONPointer given a pointer and some json data
 
-  #iex> JsonPointer.eval(true, "/")
-  #true
-  #iex> JsonPointer.eval(%{"foo~bar" => "baz"}, "/foo~0bar")
-  #"baz"
+  ```elixir
+  iex> JsonPointer.eval(true, "/")
+  true
+  iex> JsonPointer.eval(%{"foo~bar" => "baz"}, "/foo~0bar")
+  "baz"
   iex> JsonPointer.eval(%{"€" => ["quux", "ren"]}, JsonPointer.from_uri("/%E2%82%AC/1"))
   "ren"
   ```

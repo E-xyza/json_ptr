@@ -13,7 +13,7 @@ defmodule JsonPointer.MixProject do
         files: ~w(lib mix.exs README* LICENSE* VERSIONS*),
         links: %{"GitHub" => "https://github.com/ityonemo/exonerate"}
       ],
-      deps: deps()
+      deps: deps(),
       source_url: "https://github.com/E-xyza/json_pointer/",
       docs: [main: "JsonPointer"]
     ]
@@ -26,6 +26,9 @@ defmodule JsonPointer.MixProject do
   end
 
   defp deps do
-    [{:jason, "~> 1.4.0"}]
+    [
+      {:jason, "~> 1.4.0"},
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
+    ]
   end
 end
