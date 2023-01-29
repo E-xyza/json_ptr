@@ -1,13 +1,16 @@
 defmodule JsonPointer do
-  @moduledoc false
+  @moduledoc """
+  Implementation of JSONPointer.  See:
 
-  # JSONPointer implementation.  Internally, it's managed as a
-  # list of strings, with the head of the list being the outermost
-  # leaf in the JSON structure, and the end of the list being the
-  # root.
+  https://www.rfc-editor.org/rfc/rfc6901
 
-  @type t :: [String.t()]
+  Note:  Do not rely on the private internal implementation of JSON, it may change.
+  """
+
+  @opaque t :: [String.t()]
   alias Exonerate.Type
+
+  @type json :: nil | boolean | String.t() | number | [json] | %{optional(String.t()) => json}
 
   @spec from_uri(String.t()) :: t
   @doc """
@@ -51,11 +54,7 @@ defmodule JsonPointer do
   ```
   """
   def to_uri(pointer, opts \\ []) do
-    str =
-      pointer
-      |> Enum.map(&escape/1)
-      |> Enum.map(&URI.encode/1)
-      |> Enum.join("/")
+    str = Enum.map_join(pointer, "/", fn route -> route |> escape |> URI.encode() end)
 
     lead =
       List.wrap(
@@ -67,32 +66,38 @@ defmodule JsonPointer do
     IO.iodata_to_binary([lead, "/", str])
   end
 
-  @spec eval(pointer :: t, data :: Type.json()) :: Type.json()
+  # placeholder in case we change this to be more sophisticated
+  defguardp is_pointer(term) when is_list(term)
+
+  @spec eval(data :: json(), t | String.t()) :: json()
   @doc """
   evaluates a JSONPointer given a pointer and some json data
 
-  #iex> JsonPointer.eval([], true)
+  #iex> JsonPointer.eval(true, "/")
   #true
-  #iex> JsonPointer.eval(["foo~bar"], %{"foo~bar" => "baz"})
+  #iex> JsonPointer.eval(%{"foo~bar" => "baz"}, "/foo~0bar")
   #"baz"
-  iex> JsonPointer.eval(["€", "1"], %{"€" => ["quux", "ren"]})
+  iex> JsonPointer.eval(%{"€" => ["quux", "ren"]}, JsonPointer.from_uri("/%E2%82%AC/1"))
   "ren"
   ```
   """
-  def eval(pointer, data), do: eval(pointer, data, [], data)
+  def eval(data, pointer) when is_binary(pointer), do: eval(data, JsonPointer.from_uri(pointer))
+  def eval(data, pointer) when is_pointer(pointer), do: do_eval(pointer, data, [], data)
 
-  defp eval([], data, _path_rev, _src), do: data
+  defp do_eval([], data, _path_rev, _src), do: data
 
-  defp eval([leaf | root], array, pointer_rev, src) when is_list(array) do
-    eval(root, get_array(array, leaf, pointer_rev, src), [leaf | pointer_rev], src)
+  defp do_eval([leaf | root], array, pointer_rev, src) when is_list(array) do
+    do_eval(root, get_array(array, leaf, pointer_rev, src), [leaf | pointer_rev], src)
   end
 
-  defp eval([leaf | root], object, pointer_rev, src) when is_map(object) do
-    eval(root, get_object(object, leaf, pointer_rev, src), [leaf | pointer_rev], src)
+  defp do_eval([leaf | root], object, pointer_rev, src) when is_map(object) do
+    do_eval(root, get_object(object, leaf, pointer_rev, src), [leaf | pointer_rev], src)
   end
 
-  defp eval([leaf | _], other, pointer_rev, src) do
-    raise ArgumentError, message: "#{type_name(other)} at #{path(pointer_rev)} of #{inspect src} can not take the path #{leaf}"
+  defp do_eval([leaf | _], other, pointer_rev, src) do
+    raise ArgumentError,
+      message:
+        "#{type_name(other)} at #{path(pointer_rev)} of #{inspect(src)} can not take the path #{leaf}"
   end
 
   defp get_array(array, leaf, pointer_rev, src) do
@@ -103,11 +108,13 @@ defmodule JsonPointer do
     else
       :bad_index ->
         raise ArgumentError,
-          message: "array at `#{path(pointer_rev)}` of #{Jason.encode! src} does not have an item at index #{leaf}"
+          message:
+            "array at `#{path(pointer_rev)}` of #{Jason.encode!(src)} does not have an item at index #{leaf}"
 
       _ ->
         raise ArgumentError,
-          message: "array at `#{path(pointer_rev)}` of #{Jason.encode! src} cannot access with non-numerical value #{leaf}"
+          message:
+            "array at `#{path(pointer_rev)}` of #{Jason.encode!(src)} cannot access with non-numerical value #{leaf}"
     end
   end
 
@@ -122,7 +129,8 @@ defmodule JsonPointer do
 
       _ ->
         raise ArgumentError,
-          message: "object at `#{path(pointer_rev)}` of #{Jason.encode! src} cannot access with key `#{leaf}`"
+          message:
+            "object at `#{path(pointer_rev)}` of #{Jason.encode!(src)} cannot access with key `#{leaf}`"
     end
   end
 
