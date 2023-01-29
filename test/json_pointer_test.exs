@@ -11,7 +11,7 @@ defmodule JsonPointerTest do
     end
 
     test "a missing path raises" do
-      assert_raise KeyError, fn ->
+      assert_raise ArgumentError, ~S(object at `/` of {"bar":"baz"} cannot access with key `foo`), fn ->
         JsonPointer.eval(["foo"], %{"bar" => "baz"})
       end
     end

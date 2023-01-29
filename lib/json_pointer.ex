@@ -13,16 +13,17 @@ defmodule JsonPointer do
   @doc """
   converts a uri to a JSONJsonPointer
 
-  ```elixir
-  iex> alias Exonerate.JsonPointer
-  iex> JsonPointer.from_uri("/") # the root-only case
-  []
-  iex> JsonPointer.from_uri("/bar/foo")
-  ["foo", "bar"]
-  iex> JsonPointer.from_uri("/baz/foo~0bar")
+  elixir
+  #iex> JsonPointer.from_uri("/") # the root-only case
+  #[]
+  #iex> JsonPointer.from_uri("/foo/bar")
+  #["foo", "bar"]
+  #iex> JsonPointer.from_uri("/foo~0bar/baz")
   ["foo~bar", "baz"]
-  iex> JsonPointer.from_uri("/currency/%E2%82%AC")
-  ["€", "currency"]
+
+
+  #iex> JsonPointer.from_uri("/currency/%E2%82%AC")
+  #["currency", "€"]
   ```
   """
   def from_uri("/" <> rest) do
@@ -39,20 +40,19 @@ defmodule JsonPointer do
   options
   - `:authority` prepends a context to the uri.
 
-  ```elixir
-  iex> JsonPointer.to_uri(["foo", "bar"])
-  "/bar/foo"
-  iex> JsonPointer.to_uri(["foo~bar", "baz"])
-  "/baz/foo~0bar"
-  iex> JsonPointer.to_uri(["€", "currency"])
-  "/currency/%E2%82%AC"
-  iex> JsonPointer.to_uri([], authority: "foo")
+  #iex> JsonPointer.to_uri(["foo", "bar"])
+  #"/foo/bar"
+  #iex> JsonPointer.to_uri(["foo~bar", "baz"])
+  #"/foo~0bar/baz"
+  #iex> JsonPointer.to_uri(["currency","€"])
+  #"/currency/%E2%82%AC"
+  #iex> JsonPointer.to_uri([], authority: "foo")
   "foo#/"
   ```
   """
-  def to_uri(path, opts \\ []) do
+  def to_uri(pointer, opts \\ []) do
     str =
-      path
+      pointer
       |> Enum.map(&escape/1)
       |> Enum.map(&URI.encode/1)
       |> Enum.join("/")
@@ -71,48 +71,58 @@ defmodule JsonPointer do
   @doc """
   evaluates a JSONPointer given a pointer and some json data
 
-  ```elixir
-  iex> JsonPointer.eval([], true)
-  true
-  iex> JsonPointer.eval(["foo~bar"], %{"foo~bar" => "baz"})
-  "baz"
+  #iex> JsonPointer.eval([], true)
+  #true
+  #iex> JsonPointer.eval(["foo~bar"], %{"foo~bar" => "baz"})
+  #"baz"
   iex> JsonPointer.eval(["€", "1"], %{"€" => ["quux", "ren"]})
   "ren"
   ```
   """
-  def eval([], data), do: data
+  def eval(pointer, data), do: eval(pointer, data, [], data)
 
-  def eval([leaf | root], data) do
-    case eval(root, data) do
-      array when is_list(array) ->
-        get_array(array, leaf, root)
+  defp eval([], data, _path_rev, _src), do: data
 
-      object when is_map(object) ->
-        get_object(object, leaf, root)
-
-      _ ->
-        raise ArgumentError, message: "#{type_name(data)} can not take a path"
-    end
+  defp eval([leaf | root], array, pointer_rev, src) when is_list(array) do
+    eval(root, get_array(array, leaf, pointer_rev, src), [leaf | pointer_rev], src)
   end
 
-  defp get_array(array, leaf, where) do
-    case Integer.parse(leaf) do
-      {number, ""} ->
-        Enum.at(array, number)
+  defp eval([leaf | root], object, pointer_rev, src) when is_map(object) do
+    eval(root, get_object(object, leaf, pointer_rev, src), [leaf | pointer_rev], src)
+  end
+
+  defp eval([leaf | _], other, pointer_rev, src) do
+    raise ArgumentError, message: "#{type_name(other)} at #{path(pointer_rev)} of #{inspect src} can not take the path #{leaf}"
+  end
+
+  defp get_array(array, leaf, pointer_rev, src) do
+    with {index, ""} <- Integer.parse(leaf),
+         nil <- if(index < 0, do: :bad_index),
+         {:ok, content} <- get_array_index(array, index) do
+      content
+    else
+      :bad_index ->
+        raise ArgumentError,
+          message: "array at `#{path(pointer_rev)}` of #{Jason.encode! src} does not have an item at index #{leaf}"
 
       _ ->
         raise ArgumentError,
-          message: "array at `#{to_uri(where)}` cannot access at non-numerical value #{leaf}"
+          message: "array at `#{path(pointer_rev)}` of #{Jason.encode! src} cannot access with non-numerical value #{leaf}"
     end
   end
 
-  defp get_object(object, leaf, where) do
-    case Map.get(object, leaf) do
+  defp get_array_index([item | _], 0), do: {:ok, item}
+  defp get_array_index([_ | rest], index), do: get_array_index(rest, index - 1)
+  defp get_array_index([], _), do: :bad_index
+
+  defp get_object(object, leaf, pointer_rev, src) do
+    case Map.fetch(object, leaf) do
       {:ok, value} ->
         value
 
       _ ->
-        raise ArgumentError, message: "object at `#{to_uri(where)}` cannot access at key `where`"
+        raise ArgumentError,
+          message: "object at `#{path(pointer_rev)}` of #{Jason.encode! src} cannot access with key `#{leaf}`"
     end
   end
 
@@ -122,6 +132,12 @@ defmodule JsonPointer do
   defp type_name(data) when is_binary(data), do: "string"
   defp type_name(data) when is_list(data), do: "array"
   defp type_name(data) when is_map(data), do: "object"
+
+  defp path(pointer_rev) do
+    pointer_rev
+    |> Enum.reverse()
+    |> to_uri
+  end
 
   @spec deescape(String.t()) :: String.t()
   defp deescape(string) do
