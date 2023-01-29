@@ -1,14 +1,17 @@
 defmodule JsonPointer do
   @moduledoc """
-  Implementation of JSONPointer.  See:
+  Implementation of JSONPointer.
 
-  https://www.rfc-editor.org/rfc/rfc6901
+  A JSONpointer URI is converted into an internal term representation and this representation
+  may be used with `eval/2` to parse a decoded JSON term.
 
-  Note:  Do not rely on the private internal implementation of JSON, it may change.
+  See: https://www.rfc-editor.org/rfc/rfc6901
+  for the specification.
+
+  Note:  Do not rely on the private internal implementation of JSON, it may change in the future.
   """
 
   @opaque t :: [String.t()]
-  alias Exonerate.Type
 
   @type json :: nil | boolean | String.t() | number | [json] | %{optional(String.t()) => json}
 
