@@ -159,18 +159,27 @@ defmodule JsonPointer do
     end
   end
 
-  @spec traverse(t, String.t()) :: t
+  @spec traverse(t, String.t() | [String.t()]) :: t
   @doc """
-  appends information to the JsonPointer structure
+  appends information to the JsonPointer structure.  Can take either a url path-alike or a list of
+  traversals.
 
   ```elixir
   iex> ptr = JsonPointer.from_uri("/foo/bar")
   iex> ptr |> JsonPointer.traverse("baz") |> JsonPointer.to_uri
   "/foo/bar/baz"
+  iex> ptr |> JsonPointer.traverse("baz/quux") |> JsonPointer.to_uri
+  "/foo/bar/baz/quux"
+  iex> ptr |> JsonPointer.traverse(["baz", "quux"]) |> JsonPointer.to_uri
+  "/foo/bar/baz/quux"
   ```
   """
-  def traverse(pointer, next_path) do
-    pointer ++ [next_path |> escape |> URI.encode()]
+  def traverse(pointer, next_path) when is_binary(next_path) do
+    traverse(pointer, String.split(next_path, "/"))
+  end
+
+  def traverse(pointer, next_path) when is_list(next_path) do
+    pointer ++ Enum.map(next_path, fn part -> part |> escape |> URI.encode() end)
   end
 
   defp type_name(data) when is_nil(data), do: "null"
