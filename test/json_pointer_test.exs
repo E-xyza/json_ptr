@@ -3,10 +3,10 @@ defmodule JsonPointerTest do
 
   doctest JsonPointer
 
-  describe "for the eval/2 function" do
+  describe "for the resolve!/2 function" do
     test "a string path against an array raises" do
       assert_raise ArgumentError, fn ->
-        JsonPointer.eval([1, 2, 3], ["foo"])
+        JsonPointer.resolve!([1, 2, 3], ["foo"])
       end
     end
 
@@ -14,62 +14,62 @@ defmodule JsonPointerTest do
       assert_raise ArgumentError,
                    ~S(object at `/` of {"bar":"baz"} cannot access with key `foo`),
                    fn ->
-                     JsonPointer.eval(%{"bar" => "baz"}, ["foo"])
+                     JsonPointer.resolve!(%{"bar" => "baz"}, ["foo"])
                    end
     end
 
     test "true is ok with empty list" do
-      assert true == JsonPointer.eval(true, [])
+      assert true == JsonPointer.resolve!(true, [])
     end
 
     test "false is ok with empty list" do
-      assert false == JsonPointer.eval(false, [])
+      assert false == JsonPointer.resolve!(false, [])
     end
 
     test "nil is ok with empty list" do
-      assert nil == JsonPointer.eval(nil, [])
+      assert nil == JsonPointer.resolve!(nil, [])
     end
 
     test "number is ok with empty list" do
-      assert 1 == JsonPointer.eval(1, [])
-      assert 1.1 == JsonPointer.eval(1.1, [])
+      assert 1 == JsonPointer.resolve!(1, [])
+      assert 1.1 == JsonPointer.resolve!(1.1, [])
     end
 
     test "string is ok with empty list" do
-      assert "foo" == JsonPointer.eval("foo", [])
+      assert "foo" == JsonPointer.resolve!("foo", [])
     end
 
     test "true fails with list" do
       assert_raise ArgumentError, fn ->
-        JsonPointer.eval(true, ["foo"])
+        JsonPointer.resolve!(true, ["foo"])
       end
     end
 
     test "false fails with list" do
       assert_raise ArgumentError, fn ->
-        JsonPointer.eval(false, ["foo"])
+        JsonPointer.resolve!(false, ["foo"])
       end
     end
 
     test "nil fails with list" do
       assert_raise ArgumentError, fn ->
-        JsonPointer.eval(nil, ["foo"])
+        JsonPointer.resolve!(nil, ["foo"])
       end
     end
 
     test "number fails with list" do
       assert_raise ArgumentError, fn ->
-        JsonPointer.eval(1, ["foo"])
+        JsonPointer.resolve!(1, ["foo"])
       end
 
       assert_raise ArgumentError, fn ->
-        JsonPointer.eval(1.1, ["foo"])
+        JsonPointer.resolve!(1.1, ["foo"])
       end
     end
 
     test "string fails with list" do
       assert_raise ArgumentError, fn ->
-        JsonPointer.eval("foo", ["foo"])
+        JsonPointer.resolve!("foo", ["foo"])
       end
     end
   end

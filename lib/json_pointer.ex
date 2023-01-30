@@ -3,7 +3,7 @@ defmodule JsonPointer do
   Implementation of JSONPointer.
 
   A JSONpointer URI is converted into an internal term representation and this representation
-  may be used with `eval/2` to parse a decoded JSON term.
+  may be used with `resolve!/2` to parse a decoded JSON term.
 
   See: https://www.rfc-editor.org/rfc/rfc6901
   for the specification.
@@ -71,53 +71,76 @@ defmodule JsonPointer do
   # placeholder in case we change this to be more sophisticated
   defguardp is_pointer(term) when is_list(term)
 
-  @spec eval(data :: json(), t | String.t()) :: json()
+  @spec resolve!(data :: json(), t | String.t()) :: json()
   @doc """
-  evaluates a JSONPointer given a pointer and some json data
+  resolves a JSONPointer given a pointer and some json data
 
   ```elixir
-  iex> JsonPointer.eval(true, "/")
+  iex> JsonPointer.resolve!(true, "/")
   true
-  iex> JsonPointer.eval(%{"foo~bar" => "baz"}, "/foo~0bar")
+  iex> JsonPointer.resolve!(%{"foo~bar" => "baz"}, "/foo~0bar")
   "baz"
-  iex> JsonPointer.eval(%{"€" => ["quux", "ren"]}, JsonPointer.from_uri("/%E2%82%AC/1"))
+  iex> JsonPointer.resolve!(%{"€" => ["quux", "ren"]}, JsonPointer.from_uri("/%E2%82%AC/1"))
   "ren"
   ```
   """
-  def eval(data, pointer) when is_binary(pointer), do: eval(data, JsonPointer.from_uri(pointer))
-  def eval(data, pointer) when is_pointer(pointer), do: do_eval(pointer, data, [], data)
-
-  defp do_eval([], data, _path_rev, _src), do: data
-
-  defp do_eval([leaf | root], array, pointer_rev, src) when is_list(array) do
-    do_eval(root, get_array(array, leaf, pointer_rev, src), [leaf | pointer_rev], src)
+  def resolve!(data, pointer) do
+    case resolve(data, pointer) do
+      {:ok, result} -> result
+      {:error, msg} -> raise ArgumentError, msg
+    end
   end
 
-  defp do_eval([leaf | root], object, pointer_rev, src) when is_map(object) do
-    do_eval(root, get_object(object, leaf, pointer_rev, src), [leaf | pointer_rev], src)
+  @spec resolve(data :: json(), t | String.t()) :: {:ok, json()} | {:error, String.t()}
+  @doc """
+  resolves a JSONPointer given a pointer and some json data
+
+  ```elixir
+  iex> JsonPointer.resolve(true, "/")
+  {:ok, true}
+  iex> JsonPointer.resolve(%{"foo~bar" => "baz"}, "/foo~0bar")
+  {:ok, "baz"}
+  iex> JsonPointer.resolve(%{"€" => ["quux", "ren"]}, JsonPointer.from_uri("/%E2%82%AC/1"))
+  {:ok, "ren"}
+  ```
+  """
+  def resolve(data, pointer) when is_binary(pointer),
+    do: resolve(data, JsonPointer.from_uri(pointer))
+
+  def resolve(data, pointer) when is_pointer(pointer), do: do_resolve(pointer, data, [], data)
+
+  defp do_resolve([], data, _path_rev, _src), do: {:ok, data}
+
+  defp do_resolve([leaf | root], array, pointer_rev, src) when is_list(array) do
+    with {:ok, value} <- get_array(array, leaf, pointer_rev, src) do
+      do_resolve(root, value, [leaf | pointer_rev], src)
+    end
   end
 
-  defp do_eval([leaf | _], other, pointer_rev, src) do
-    raise ArgumentError,
-      message:
-        "#{type_name(other)} at #{path(pointer_rev)} of #{inspect(src)} can not take the path #{leaf}"
+  defp do_resolve([leaf | root], object, pointer_rev, src) when is_map(object) do
+    with {:ok, value} <- get_object(object, leaf, pointer_rev, src) do
+      do_resolve(root, value, [leaf | pointer_rev], src)
+    end
+  end
+
+  defp do_resolve([leaf | _], other, pointer_rev, src) do
+    {:error,
+     "#{type_name(other)} at #{path(pointer_rev)} of #{inspect(src)} can not take the path #{leaf}"}
   end
 
   defp get_array(array, leaf, pointer_rev, src) do
     with {index, ""} <- Integer.parse(leaf),
          nil <- if(index < 0, do: :bad_index),
          {:ok, content} <- get_array_index(array, index) do
-      content
+      {:ok, content}
     else
       :bad_index ->
-        raise ArgumentError,
-          message:
-            "array at `#{path(pointer_rev)}` of #{Jason.encode!(src)} does not have an item at index #{leaf}"
+        {:error,
+         "array at `#{path(pointer_rev)}` of #{Jason.encode!(src)} does not have an item at index #{leaf}"}
 
       _ ->
-        raise ArgumentError,
-          message:
-            "array at `#{path(pointer_rev)}` of #{Jason.encode!(src)} cannot access with non-numerical value #{leaf}"
+        {:error,
+         "array at `#{path(pointer_rev)}` of #{Jason.encode!(src)} cannot access with non-numerical value #{leaf}"}
     end
   end
 
@@ -127,13 +150,12 @@ defmodule JsonPointer do
 
   defp get_object(object, leaf, pointer_rev, src) do
     case Map.fetch(object, leaf) do
-      {:ok, value} ->
-        value
+      fetched = {:ok, _} ->
+        fetched
 
       _ ->
-        raise ArgumentError,
-          message:
-            "object at `#{path(pointer_rev)}` of #{Jason.encode!(src)} cannot access with key `#{leaf}`"
+        {:error,
+         "object at `#{path(pointer_rev)}` of #{Jason.encode!(src)} cannot access with key `#{leaf}`"}
     end
   end
 
