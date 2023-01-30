@@ -159,6 +159,11 @@ defmodule JsonPointer do
     end
   end
 
+  @spec traverse(t, String.t) :: t
+  def traverse(pointer, next_path) do
+    pointer ++ [next_path |> escape |> URI.encode]
+  end
+
   defp type_name(data) when is_nil(data), do: "null"
   defp type_name(data) when is_boolean(data), do: "boolean"
   defp type_name(data) when is_number(data), do: "number"
