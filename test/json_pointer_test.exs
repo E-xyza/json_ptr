@@ -74,7 +74,10 @@ defmodule JsonPointerTest do
     end
 
     test "multi-level entry works" do
-      data = Jason.decode!(~S({"oneOf":[{"multipleOf":5,"type":"number"},{"multipleOf":3,"type":"number"},{"type":"object"}]}))
+      data =
+        Jason.decode!(
+          ~S({"oneOf":[{"multipleOf":5,"type":"number"},{"multipleOf":3,"type":"number"},{"type":"object"}]})
+        )
 
       assert 5 == JsonPointer.resolve!(data, ["oneOf", "0", "multipleOf"])
     end
