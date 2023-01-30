@@ -81,5 +81,10 @@ defmodule JsonPointerTest do
 
       assert 5 == JsonPointer.resolve!(data, ["oneOf", "0", "multipleOf"])
     end
+
+    test "traverse" do
+      pointer = JsonPointer.from_uri("/foo")
+      assert "/foo/bar" == JsonPointer.to_uri(JsonPointer.traverse(pointer, "bar"))
+    end
   end
 end

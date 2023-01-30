@@ -160,6 +160,15 @@ defmodule JsonPointer do
   end
 
   @spec traverse(t, String.t()) :: t
+  @doc """
+  appends information to the JsonPointer structure
+
+  ```elixir
+  iex> ptr = JsonPointer.from_uri("/foo/bar")
+  iex> ptr |> JsonPointer.traverse("baz") |> JsonPointer.to_uri
+  "/foo/bar/baz"
+  ```
+  """
   def traverse(pointer, next_path) do
     pointer ++ [next_path |> escape |> URI.encode()]
   end
