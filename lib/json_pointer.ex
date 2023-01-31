@@ -179,7 +179,7 @@ defmodule JsonPointer do
   end
 
   def traverse(pointer, next_path) when is_list(next_path) do
-    pointer ++ Enum.map(next_path, fn part -> part |> escape |> URI.encode() end)
+    pointer ++ Enum.map(next_path, fn part -> part |> URI.decode() |> deescape end)
   end
 
   defp type_name(data) when is_nil(data), do: "null"
