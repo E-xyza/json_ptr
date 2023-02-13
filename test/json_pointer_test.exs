@@ -90,7 +90,11 @@ defmodule JsonPointerTest do
     test "escaped" do
       pointer = JsonPointer.from_uri("/definitions")
       traversed = JsonPointer.traverse(pointer, "foo\"bar")
-      data = Jason.decode!(~S({"definitions":{"foo\"bar":{"type":"number"}},"properties":{"foo\"bar":{"$ref":"#/definitions/foo%22bar"}}}))
+
+      data =
+        Jason.decode!(
+          ~S({"definitions":{"foo\"bar":{"type":"number"}},"properties":{"foo\"bar":{"$ref":"#/definitions/foo%22bar"}}})
+        )
 
       JsonPointer.resolve!(data, traversed)
     end

@@ -208,4 +208,31 @@ defmodule JsonPointer do
     |> String.replace("~", "~0")
     |> String.replace("/", "~1")
   end
+
+  @spec backtrack(t) :: {:ok, t} | :error
+  @doc """
+  iex> {:ok, ptr} = "/foo/bar" |> JsonPointer.from_uri |> JsonPointer.backtrack
+  iex> JsonPointer.to_uri(ptr)
+  "/foo"
+  """
+  def backtrack([]), do: :error
+  def backtrack(list), do: {:ok, do_backtrack(list, [])}
+
+  defp do_backtrack([_last], so_far), do: Enum.reverse(so_far)
+  defp do_backtrack([a | b], so_far), do: do_backtrack(b, [a | so_far])
+
+  @spec backtrack!(t) :: t
+  @doc """
+  like `backtrack/1`, but raises if attempted to backtrack from the root.
+  """
+  def backtrack!(pointer) do
+    case backtrack(pointer) do
+      {:ok, pointer} ->
+        pointer
+
+      :error ->
+        raise ArgumentError,
+          message: "the JSONPointer `/` is a root pointer and cannot be backtracked"
+    end
+  end
 end
