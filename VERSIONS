@@ -12,3 +12,8 @@
 ## 0.3.0
 
 - adds `backtrack/1` function
+
+## 0.4.0
+
+- renames `traverse/2` to `join/2`
+- creates `pop/1` function

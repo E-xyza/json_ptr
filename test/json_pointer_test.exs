@@ -82,21 +82,21 @@ defmodule JsonPointerTest do
       assert 5 == JsonPointer.resolve!(data, ["oneOf", "0", "multipleOf"])
     end
 
-    test "traverse" do
+    test "join" do
       pointer = JsonPointer.from_uri("/foo")
-      assert "/foo/bar" == JsonPointer.to_uri(JsonPointer.traverse(pointer, "bar"))
+      assert "/foo/bar" == JsonPointer.to_uri(JsonPointer.join(pointer, "bar"))
     end
 
     test "escaped" do
       pointer = JsonPointer.from_uri("/definitions")
-      traversed = JsonPointer.traverse(pointer, "foo\"bar")
+      joind = JsonPointer.join(pointer, "foo\"bar")
 
       data =
         Jason.decode!(
           ~S({"definitions":{"foo\"bar":{"type":"number"}},"properties":{"foo\"bar":{"$ref":"#/definitions/foo%22bar"}}})
         )
 
-      JsonPointer.resolve!(data, traversed)
+      JsonPointer.resolve!(data, joind)
     end
   end
 end

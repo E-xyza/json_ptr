@@ -159,26 +159,26 @@ defmodule JsonPointer do
     end
   end
 
-  @spec traverse(t, String.t() | [String.t()]) :: t
+  @spec join(t, String.t() | [String.t()]) :: t
   @doc """
   appends information to the JsonPointer structure.  Can take either a url path-alike or a list of
   traversals.
 
   ```elixir
   iex> ptr = JsonPointer.from_uri("/foo/bar")
-  iex> ptr |> JsonPointer.traverse("baz") |> JsonPointer.to_uri
+  iex> ptr |> JsonPointer.join("baz") |> JsonPointer.to_uri
   "/foo/bar/baz"
-  iex> ptr |> JsonPointer.traverse("baz/quux") |> JsonPointer.to_uri
+  iex> ptr |> JsonPointer.join("baz/quux") |> JsonPointer.to_uri
   "/foo/bar/baz/quux"
-  iex> ptr |> JsonPointer.traverse(["baz", "quux"]) |> JsonPointer.to_uri
+  iex> ptr |> JsonPointer.join(["baz", "quux"]) |> JsonPointer.to_uri
   "/foo/bar/baz/quux"
   ```
   """
-  def traverse(pointer, next_path) when is_binary(next_path) do
-    traverse(pointer, String.split(next_path, "/"))
+  def join(pointer, next_path) when is_binary(next_path) do
+    join(pointer, String.split(next_path, "/"))
   end
 
-  def traverse(pointer, next_path) when is_list(next_path) do
+  def join(pointer, next_path) when is_list(next_path) do
     pointer ++ Enum.map(next_path, fn part -> part |> URI.decode() |> deescape end)
   end
 
@@ -234,5 +234,23 @@ defmodule JsonPointer do
         raise ArgumentError,
           message: "the JSONPointer `/` is a root pointer and cannot be backtracked"
     end
+  end
+
+  @spec pop(t) :: {t, String.t()} | :error
+  @doc """
+  returns the last part of the pointer and the pointer without it.
+  iex> {rest, last} = "/foo/bar" |> JsonPointer.from_uri |> JsonPointer.pop
+  iex> last
+  "bar"
+  iex> JsonPointer.to_uri(rest)
+  "/foo"
+  iex> "/" |> JsonPointer.from_uri |> JsonPointer.pop
+  :error
+  """
+  def pop([]), do: :error
+
+  def pop(pointer) do
+    [last | rest] = Enum.reverse(pointer)
+    {Enum.reverse(rest), last}
   end
 end
