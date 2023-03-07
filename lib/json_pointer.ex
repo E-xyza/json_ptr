@@ -101,8 +101,9 @@ defmodule JsonPointer do
 
   @spec to_uri(t) :: URI.t()
   @doc """
-  creates a `t:URI.t/0` struct out of a JsonPointer.  The JsonPointer is placed
-  in the `:fragment` field of the URI.
+  creates a `t:URI.t/0` struct out of a JsonPointer.
+
+  The JsonPointer is placed in the `:fragment` field of the URI.
 
   ```elixir
   iex> JsonPointer.to_uri(["foo", "bar"])
@@ -280,9 +281,13 @@ defmodule JsonPointer do
 
   @spec backtrack(t) :: {:ok, t} | :error
   @doc """
+  rolls back the JsonPointer to the parent of its most distant leaf.
+
+  ```elixir
   iex> {:ok, ptr} = "/foo/bar" |> JsonPointer.from_path |> JsonPointer.backtrack
   iex> JsonPointer.to_path(ptr)
   "/foo"
+  ```
   """
   def backtrack([]), do: :error
   def backtrack(list), do: {:ok, do_backtrack(list, [])}
