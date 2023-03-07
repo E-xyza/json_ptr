@@ -3,7 +3,7 @@ defmodule JsonPointer do
   Implementation of JSONPointer.
 
   A JSONpointer URI is converted into an internal term representation and this representation
-  may be used with `resolve!/2` to parse a decoded JSON term.
+  may be used with `resolve_json!/2` to parse a decoded JSON term.
 
   See: https://www.rfc-editor.org/rfc/rfc6901
   for the specification.
@@ -71,59 +71,59 @@ defmodule JsonPointer do
   # placeholder in case we change this to be more sophisticated
   defguardp is_pointer(term) when is_list(term)
 
-  @spec resolve!(data :: json(), t | String.t()) :: json()
+  @spec resolve_json!(data :: json(), t | String.t()) :: json()
   @doc """
-  resolves a JSONPointer given a pointer and some json data
+  resolve_jsons a JSONPointer given a pointer and some json data
 
   ```elixir
-  iex> JsonPointer.resolve!(true, "/")
+  iex> JsonPointer.resolve_json!(true, "/")
   true
-  iex> JsonPointer.resolve!(%{"foo~bar" => "baz"}, "/foo~0bar")
+  iex> JsonPointer.resolve_json!(%{"foo~bar" => "baz"}, "/foo~0bar")
   "baz"
-  iex> JsonPointer.resolve!(%{"€" => ["quux", "ren"]}, JsonPointer.from_uri("/%E2%82%AC/1"))
+  iex> JsonPointer.resolve_json!(%{"€" => ["quux", "ren"]}, JsonPointer.from_uri("/%E2%82%AC/1"))
   "ren"
   ```
   """
-  def resolve!(data, pointer) do
-    case resolve(data, pointer) do
+  def resolve_json!(data, pointer) do
+    case resolve_json(data, pointer) do
       {:ok, result} -> result
       {:error, msg} -> raise ArgumentError, msg
     end
   end
 
-  @spec resolve(data :: json(), t | String.t()) :: {:ok, json()} | {:error, String.t()}
+  @spec resolve_json(data :: json(), t | String.t()) :: {:ok, json()} | {:error, String.t()}
   @doc """
-  resolves a JSONPointer given a pointer and some json data
+  resolve_jsons a JSONPointer given a pointer and some json data
 
   ```elixir
-  iex> JsonPointer.resolve(true, "/")
+  iex> JsonPointer.resolve_json(true, "/")
   {:ok, true}
-  iex> JsonPointer.resolve(%{"foo~bar" => "baz"}, "/foo~0bar")
+  iex> JsonPointer.resolve_json(%{"foo~bar" => "baz"}, "/foo~0bar")
   {:ok, "baz"}
-  iex> JsonPointer.resolve(%{"€" => ["quux", "ren"]}, JsonPointer.from_uri("/%E2%82%AC/1"))
+  iex> JsonPointer.resolve_json(%{"€" => ["quux", "ren"]}, JsonPointer.from_uri("/%E2%82%AC/1"))
   {:ok, "ren"}
   ```
   """
-  def resolve(data, pointer) when is_binary(pointer),
-    do: resolve(data, JsonPointer.from_uri(pointer))
+  def resolve_json(data, pointer) when is_binary(pointer),
+    do: resolve_json(data, JsonPointer.from_uri(pointer))
 
-  def resolve(data, pointer) when is_pointer(pointer), do: do_resolve(pointer, data, [], data)
+  def resolve_json(data, pointer) when is_pointer(pointer), do: do_resolve_json(pointer, data, [], data)
 
-  defp do_resolve([], data, _path_rev, _src), do: {:ok, data}
+  defp do_resolve_json([], data, _path_rev, _src), do: {:ok, data}
 
-  defp do_resolve([leaf | root], array, pointer_rev, src) when is_list(array) do
+  defp do_resolve_json([leaf | root], array, pointer_rev, src) when is_list(array) do
     with {:ok, value} <- get_array(array, leaf, pointer_rev, src) do
-      do_resolve(root, value, [leaf | pointer_rev], src)
+      do_resolve_json(root, value, [leaf | pointer_rev], src)
     end
   end
 
-  defp do_resolve([leaf | root], object, pointer_rev, src) when is_map(object) do
+  defp do_resolve_json([leaf | root], object, pointer_rev, src) when is_map(object) do
     with {:ok, value} <- get_object(object, leaf, pointer_rev, src) do
-      do_resolve(root, value, [leaf | pointer_rev], src)
+      do_resolve_json(root, value, [leaf | pointer_rev], src)
     end
   end
 
-  defp do_resolve([leaf | _], other, pointer_rev, src) do
+  defp do_resolve_json([leaf | _], other, pointer_rev, src) do
     {:error,
      "#{type_name(other)} at #{path(pointer_rev)} of #{inspect(src)} can not take the path #{leaf}"}
   end
@@ -158,6 +158,32 @@ defmodule JsonPointer do
          "object at `#{path(pointer_rev)}` of #{Jason.encode!(src)} cannot access with key `#{leaf}`"}
     end
   end
+
+  @spec update_json!(data :: json, t, (json -> json)) :: json
+  @doc """
+  updates nested json data at the expected location
+
+  ```elixir
+  iex> ptr = JsonPointer.from_uri("/foo/0")
+  iex> JsonPointer.update_json!(%{"foo" => [1, 2]}, ptr, &(&1 + 1))
+  %{"foo" => [2, 2]}
+  iex> JsonPointer.update_json!(%{"foo" => %{"0" => 1}}, ptr, &(&1 + 1))
+  %{"foo" => %{"0" => 2}}
+  ```
+  """
+  def update_json!(object, [head | rest], transformation) when is_map(object) do
+    Map.update!(object, head, &update_json!(&1, rest, transformation))
+  end
+
+  def update_json!(list, [head | rest], transformation) when is_list(list) and is_binary(head) do
+    update_json!(list, [String.to_integer(head) | rest], transformation)
+  end
+
+  def update_json!(list, [head | rest], transformation) when is_list(list) and is_integer(head) do
+    List.update_at(list, head, &update_json!(&1, rest, transformation))
+  end
+
+  def update_json!(data, [], transformation), do: transformation.(data)
 
   @spec join(t, String.t() | [String.t()]) :: t
   @doc """

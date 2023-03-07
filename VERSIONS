@@ -17,3 +17,9 @@
 
 - renames `traverse/2` to `join/2`
 - creates `pop/1` function
+
+## 0.5.0
+
+- renames `resolve/2` and `resolve!/2` to `resolve_json/2` and `resolve_json!/2` to
+  indicate that they operate on json as the first parameter.
+- creates `update_json!/3`

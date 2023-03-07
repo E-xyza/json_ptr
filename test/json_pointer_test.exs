@@ -3,10 +3,10 @@ defmodule JsonPointerTest do
 
   doctest JsonPointer
 
-  describe "for the resolve!/2 function" do
+  describe "for the resolve_json!/2 function" do
     test "a string path against an array raises" do
       assert_raise ArgumentError, fn ->
-        JsonPointer.resolve!([1, 2, 3], ["foo"])
+        JsonPointer.resolve_json!([1, 2, 3], ["foo"])
       end
     end
 
@@ -14,62 +14,62 @@ defmodule JsonPointerTest do
       assert_raise ArgumentError,
                    ~S(object at `/` of {"bar":"baz"} cannot access with key `foo`),
                    fn ->
-                     JsonPointer.resolve!(%{"bar" => "baz"}, ["foo"])
+                     JsonPointer.resolve_json!(%{"bar" => "baz"}, ["foo"])
                    end
     end
 
     test "true is ok with empty list" do
-      assert true == JsonPointer.resolve!(true, [])
+      assert true == JsonPointer.resolve_json!(true, [])
     end
 
     test "false is ok with empty list" do
-      assert false == JsonPointer.resolve!(false, [])
+      assert false == JsonPointer.resolve_json!(false, [])
     end
 
     test "nil is ok with empty list" do
-      assert nil == JsonPointer.resolve!(nil, [])
+      assert nil == JsonPointer.resolve_json!(nil, [])
     end
 
     test "number is ok with empty list" do
-      assert 1 == JsonPointer.resolve!(1, [])
-      assert 1.1 == JsonPointer.resolve!(1.1, [])
+      assert 1 == JsonPointer.resolve_json!(1, [])
+      assert 1.1 == JsonPointer.resolve_json!(1.1, [])
     end
 
     test "string is ok with empty list" do
-      assert "foo" == JsonPointer.resolve!("foo", [])
+      assert "foo" == JsonPointer.resolve_json!("foo", [])
     end
 
     test "true fails with list" do
       assert_raise ArgumentError, fn ->
-        JsonPointer.resolve!(true, ["foo"])
+        JsonPointer.resolve_json!(true, ["foo"])
       end
     end
 
     test "false fails with list" do
       assert_raise ArgumentError, fn ->
-        JsonPointer.resolve!(false, ["foo"])
+        JsonPointer.resolve_json!(false, ["foo"])
       end
     end
 
     test "nil fails with list" do
       assert_raise ArgumentError, fn ->
-        JsonPointer.resolve!(nil, ["foo"])
+        JsonPointer.resolve_json!(nil, ["foo"])
       end
     end
 
     test "number fails with list" do
       assert_raise ArgumentError, fn ->
-        JsonPointer.resolve!(1, ["foo"])
+        JsonPointer.resolve_json!(1, ["foo"])
       end
 
       assert_raise ArgumentError, fn ->
-        JsonPointer.resolve!(1.1, ["foo"])
+        JsonPointer.resolve_json!(1.1, ["foo"])
       end
     end
 
     test "string fails with list" do
       assert_raise ArgumentError, fn ->
-        JsonPointer.resolve!("foo", ["foo"])
+        JsonPointer.resolve_json!("foo", ["foo"])
       end
     end
 
@@ -79,7 +79,7 @@ defmodule JsonPointerTest do
           ~S({"oneOf":[{"multipleOf":5,"type":"number"},{"multipleOf":3,"type":"number"},{"type":"object"}]})
         )
 
-      assert 5 == JsonPointer.resolve!(data, ["oneOf", "0", "multipleOf"])
+      assert 5 == JsonPointer.resolve_json!(data, ["oneOf", "0", "multipleOf"])
     end
 
     test "join" do
@@ -96,7 +96,7 @@ defmodule JsonPointerTest do
           ~S({"definitions":{"foo\"bar":{"type":"number"}},"properties":{"foo\"bar":{"$ref":"#/definitions/foo%22bar"}}})
         )
 
-      JsonPointer.resolve!(data, joind)
+      JsonPointer.resolve_json!(data, joind)
     end
   end
 end
