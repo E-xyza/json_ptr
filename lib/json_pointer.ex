@@ -30,14 +30,15 @@ defmodule JsonPointer do
   ["currency", "€"]
   ```
   """
-  def from_path("/" <> rest) do
-    rest
+  def from_path(path) do
+    path
+    |> to_string
     |> URI.decode()
     |> String.split("/", trim: true)
     |> Enum.map(&deescape/1)
   end
 
-  @spec to_path(t, keyword) :: Path.t()
+  @spec to_path(t) :: Path.t()
   @doc """
   creates a JSONPointer to its URI equivalent.
 
@@ -51,21 +52,12 @@ defmodule JsonPointer do
   "/foo~0bar/baz"
   iex> JsonPointer.to_path(["currency","€"])
   "/currency/%E2%82%AC"
-  iex> JsonPointer.to_path([], authority: "foo")
-  "foo#/"
   ```
   """
-  def to_path(pointer, opts \\ []) do
-    str = Enum.map_join(pointer, "/", fn route -> route |> escape |> URI.encode() end)
-
-    lead =
-      List.wrap(
-        if opts[:authority] do
-          [opts[:authority], "#"]
-        end
-      )
-
-    IO.iodata_to_binary([lead, "/", str])
+  def to_path(pointer) do
+    pointer
+    |> Enum.map_join("/", fn route -> route |> escape |> URI.encode() end)
+    |> String.replace_prefix("", "/")
   end
 
   # placeholder in case we change this to be more sophisticated
@@ -73,7 +65,7 @@ defmodule JsonPointer do
 
   @spec resolve_json!(data :: json(), t | String.t()) :: json()
   @doc """
-  resolve_jsons a JSONPointer given a pointer and some json data
+  resolves a JSONPointer given a pointer and some json data
 
   ```elixir
   iex> JsonPointer.resolve_json!(true, "/")
@@ -93,7 +85,7 @@ defmodule JsonPointer do
 
   @spec resolve_json(data :: json(), t | String.t()) :: {:ok, json()} | {:error, String.t()}
   @doc """
-  resolve_jsons a JSONPointer given a pointer and some json data
+  resolves a JSONPointer given a pointer and some json data
 
   ```elixir
   iex> JsonPointer.resolve_json(true, "/")
