@@ -83,12 +83,12 @@ defmodule JsonPointerTest do
     end
 
     test "join" do
-      pointer = JsonPointer.from_uri("/foo")
-      assert "/foo/bar" == JsonPointer.to_uri(JsonPointer.join(pointer, "bar"))
+      pointer = JsonPointer.from_path("/foo")
+      assert "/foo/bar" == JsonPointer.to_path(JsonPointer.join(pointer, "bar"))
     end
 
     test "escaped" do
-      pointer = JsonPointer.from_uri("/definitions")
+      pointer = JsonPointer.from_path("/definitions")
       joind = JsonPointer.join(pointer, "foo\"bar")
 
       data =
