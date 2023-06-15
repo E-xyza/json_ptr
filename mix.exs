@@ -1,4 +1,4 @@
-defmodule JsonPointer.MixProject do
+defmodule JsonPtr.MixProject do
   use Mix.Project
 
   def project do
@@ -15,7 +15,7 @@ defmodule JsonPointer.MixProject do
       ],
       deps: deps(),
       source_url: "https://github.com/E-xyza/json_pointer/",
-      docs: [main: "JsonPointer"]
+      docs: [main: "JsonPtr"]
     ]
   end
 

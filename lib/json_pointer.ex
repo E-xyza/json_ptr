@@ -1,4 +1,4 @@
-defmodule JsonPointer do
+defmodule JsonPtr do
   @moduledoc """
   Implementation of JSONPointer.
 
@@ -21,16 +21,16 @@ defmodule JsonPointer do
 
   @spec from_path(Path.t()) :: t
   @doc """
-  converts a path to a JsonPointer
+  converts a path to a JsonPtr
 
   ```elixir
-  iex> JsonPointer.from_path("/") # the root-only case
+  iex> JsonPtr.from_path("/") # the root-only case
   []
-  iex> JsonPointer.from_path("/foo/bar")
+  iex> JsonPtr.from_path("/foo/bar")
   ["foo", "bar"]
-  iex> JsonPointer.from_path("/foo~0bar/baz")
+  iex> JsonPtr.from_path("/foo~0bar/baz")
   ["foo~bar", "baz"]
-  iex> JsonPointer.from_path("/currency/%E2%82%AC")
+  iex> JsonPtr.from_path("/currency/%E2%82%AC")
   ["currency", "€"]
   ```
   """
@@ -44,16 +44,16 @@ defmodule JsonPointer do
 
   @spec from_uri(URI.t() | String.t()) :: t
   @doc """
-  converts a URI (or a URI-string) to a JsonPointer.
+  converts a URI (or a URI-string) to a JsonPtr.
 
   ```elixir
-  iex> JsonPointer.from_uri("#/foo/bar")
+  iex> JsonPtr.from_uri("#/foo/bar")
   ["foo", "bar"]
-  iex> JsonPointer.from_uri("/foo/bar")
+  iex> JsonPtr.from_uri("/foo/bar")
   ["foo", "bar"]
-  iex> JsonPointer.from_uri(%URI{path: "/foo/bar"})
+  iex> JsonPtr.from_uri(%URI{path: "/foo/bar"})
   ["foo", "bar"]
-  iex> JsonPointer.from_uri(%URI{fragment: "/foo/bar", host: "elixir-lang.org"})
+  iex> JsonPtr.from_uri(%URI{fragment: "/foo/bar", host: "elixir-lang.org"})
   ["foo", "bar"]
   ```
   """
@@ -82,14 +82,14 @@ defmodule JsonPointer do
 
   @spec to_path(t) :: Path.t()
   @doc """
-  creates a JsonPointer to its path equivalent.
+  creates a JsonPtr to its path equivalent.
 
   ```elixir
-  iex> JsonPointer.to_path(["foo", "bar"])
+  iex> JsonPtr.to_path(["foo", "bar"])
   "/foo/bar"
-  iex> JsonPointer.to_path(["foo~bar", "baz"])
+  iex> JsonPtr.to_path(["foo~bar", "baz"])
   "/foo~0bar/baz"
-  iex> JsonPointer.to_path(["currency","€"])
+  iex> JsonPtr.to_path(["currency","€"])
   "/currency/%E2%82%AC"
   ```
   """
@@ -101,12 +101,12 @@ defmodule JsonPointer do
 
   @spec to_uri(t) :: URI.t()
   @doc """
-  creates a `t:URI.t/0` struct out of a JsonPointer.
+  creates a `t:URI.t/0` struct out of a JsonPtr.
 
-  The JsonPointer is placed in the `:fragment` field of the URI.
+  The JsonPtr is placed in the `:fragment` field of the URI.
 
   ```elixir
-  iex> JsonPointer.to_uri(["foo", "bar"])
+  iex> JsonPtr.to_uri(["foo", "bar"])
   %URI{fragment: "/foo/bar"}
   ```
   """
@@ -119,14 +119,14 @@ defmodule JsonPointer do
 
   @spec resolve_json!(data :: json(), t | String.t()) :: json()
   @doc """
-  given some JSON data, resolves a the content pointed to by the JsonPointer
+  given some JSON data, resolves a the content pointed to by the JsonPtr
 
   ```elixir
-  iex> JsonPointer.resolve_json!(true, "/")
+  iex> JsonPtr.resolve_json!(true, "/")
   true
-  iex> JsonPointer.resolve_json!(%{"foo~bar" => "baz"}, "/foo~0bar")
+  iex> JsonPtr.resolve_json!(%{"foo~bar" => "baz"}, "/foo~0bar")
   "baz"
-  iex> JsonPointer.resolve_json!(%{"€" => ["quux", "ren"]}, JsonPointer.from_path("/%E2%82%AC/1"))
+  iex> JsonPtr.resolve_json!(%{"€" => ["quux", "ren"]}, JsonPtr.from_path("/%E2%82%AC/1"))
   "ren"
   ```
   """
@@ -139,19 +139,19 @@ defmodule JsonPointer do
 
   @spec resolve_json(data :: json(), t | String.t()) :: {:ok, json()} | {:error, String.t()}
   @doc """
-  given some JSON data, resolves a the content pointed to by the JsonPointer.
+  given some JSON data, resolves a the content pointed to by the JsonPtr.
 
   ```elixir
-  iex> JsonPointer.resolve_json(true, "/")
+  iex> JsonPtr.resolve_json(true, "/")
   {:ok, true}
-  iex> JsonPointer.resolve_json(%{"foo~bar" => "baz"}, "/foo~0bar")
+  iex> JsonPtr.resolve_json(%{"foo~bar" => "baz"}, "/foo~0bar")
   {:ok, "baz"}
-  iex> JsonPointer.resolve_json(%{"€" => ["quux", "ren"]}, JsonPointer.from_path("/%E2%82%AC/1"))
+  iex> JsonPtr.resolve_json(%{"€" => ["quux", "ren"]}, JsonPtr.from_path("/%E2%82%AC/1"))
   {:ok, "ren"}
   ```
   """
   def resolve_json(data, pointer) when is_binary(pointer),
-    do: resolve_json(data, JsonPointer.from_path(pointer))
+    do: resolve_json(data, JsonPtr.from_path(pointer))
 
   def resolve_json(data, pointer) when is_pointer(pointer),
     do: do_resolve_json(pointer, data, [], data)
@@ -208,13 +208,13 @@ defmodule JsonPointer do
 
   @spec update_json!(data :: json, t, (json -> json)) :: json
   @doc """
-  updates nested JSON data at the location given by the JsonPointer.
+  updates nested JSON data at the location given by the JsonPtr.
 
   ```elixir
-  iex> ptr = JsonPointer.from_path("/foo/0")
-  iex> JsonPointer.update_json!(%{"foo" => [1, 2]}, ptr, &(&1 + 1))
+  iex> ptr = JsonPtr.from_path("/foo/0")
+  iex> JsonPtr.update_json!(%{"foo" => [1, 2]}, ptr, &(&1 + 1))
   %{"foo" => [2, 2]}
-  iex> JsonPointer.update_json!(%{"foo" => %{"0" => 1}}, ptr, &(&1 + 1))
+  iex> JsonPtr.update_json!(%{"foo" => %{"0" => 1}}, ptr, &(&1 + 1))
   %{"foo" => %{"0" => 2}}
   ```
   """
@@ -234,13 +234,13 @@ defmodule JsonPointer do
 
   @spec join(t, String.t() | [String.t()]) :: t
   @doc """
-  appends path to the JsonPointer.  This may either be a `t:String.t`, a list of `t:String.t`.
+  appends path to the JsonPtr.  This may either be a `t:String.t`, a list of `t:String.t`.
 
   ```elixir
-  iex> ptr = JsonPointer.from_path("/foo/bar")
-  iex> ptr |> JsonPointer.join("baz") |> JsonPointer.to_path
+  iex> ptr = JsonPtr.from_path("/foo/bar")
+  iex> ptr |> JsonPtr.join("baz") |> JsonPtr.to_path
   "/foo/bar/baz"
-  iex> ptr |> JsonPointer.join(["baz", "quux"]) |> JsonPointer.to_path
+  iex> ptr |> JsonPtr.join(["baz", "quux"]) |> JsonPtr.to_path
   "/foo/bar/baz/quux"
   ```
   """
@@ -281,11 +281,11 @@ defmodule JsonPointer do
 
   @spec backtrack(t) :: {:ok, t} | :error
   @doc """
-  rolls back the JsonPointer to the parent of its most distant leaf.
+  rolls back the JsonPtr to the parent of its most distant leaf.
 
   ```elixir
-  iex> {:ok, ptr} = "/foo/bar" |> JsonPointer.from_path |> JsonPointer.backtrack
-  iex> JsonPointer.to_path(ptr)
+  iex> {:ok, ptr} = "/foo/bar" |> JsonPtr.from_path |> JsonPtr.backtrack
+  iex> JsonPtr.to_path(ptr)
   "/foo"
   ```
   """
@@ -315,12 +315,12 @@ defmodule JsonPointer do
   returns the last part of the pointer and the pointer without it.
 
   ```elixir
-  iex> {rest, last} = "/foo/bar" |> JsonPointer.from_path |> JsonPointer.pop
+  iex> {rest, last} = "/foo/bar" |> JsonPtr.from_path |> JsonPtr.pop
   iex> last
   "bar"
-  iex> JsonPointer.to_path(rest)
+  iex> JsonPtr.to_path(rest)
   "/foo"
-  iex> "/" |> JsonPointer.from_path |> JsonPointer.pop
+  iex> "/" |> JsonPtr.from_path |> JsonPtr.pop
   :error
   ```
   """

@@ -1,6 +1,6 @@
-# JsonPointer
+# JsonPtr
 
-Toolkit for JSONPointer.  Note that the module name is `JsonPointer` but the app name is `:json_ptr`.
+Toolkit for JSONPointer.  Note that the module name is `JsonPtr` but the app name is `:json_ptr`.
 
 ## Installation
 
