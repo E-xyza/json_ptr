@@ -4,17 +4,17 @@ defmodule JsonPtr.MixProject do
   def project do
     [
       app: :json_ptr,
-      version: "0.6.0",
+      version: "1.0.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       package: [
         description: "JSONPointer tools",
         licenses: ["MIT"],
         files: ~w(lib mix.exs README* LICENSE* VERSIONS*),
-        links: %{"GitHub" => "https://github.com/E-xyza/json_pointer"}
+        links: %{"GitHub" => "https://github.com/E-xyza/json_ptr"}
       ],
       deps: deps(),
-      source_url: "https://github.com/E-xyza/json_pointer/",
+      source_url: "https://github.com/E-xyza/json_ptr/",
       docs: [main: "JsonPtr"]
     ]
   end

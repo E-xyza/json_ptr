@@ -29,3 +29,7 @@
 - renames `from_path` to `from_uri`, which operates on a path type
 - creates `from_uri`, which takes either a string uri or a uri struct and 
   extracts from either the anchor or the path.
+
+## 1.0.0
+
+- changes namespace to JsonPtr and repoints github
