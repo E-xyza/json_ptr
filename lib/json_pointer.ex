@@ -339,6 +339,37 @@ defmodule JsonPtr do
     {Enum.reverse(rest), last}
   end
 
+  @spec flat_map(t, json, (t, json -> [result])) :: [result] when result: term
+  @doc """
+  Performs a flat_map operation on the JSON data at the given pointer, analogous
+  to `Enum.flat_map/2`.
+
+  The iterator function will be passed the updated pointer *and* the data at
+  that pointer.
+
+  ```elixir
+  iex> ptr = JsonPtr.from_path("/foo")
+  iex> JsonPtr.flat_map(ptr, %{"foo" => %{"bar" => "baz"}}, fn ptr, data -> [{JsonPtr.to_path(ptr), data}] end)
+  [{"/foo/bar", "baz"}]
+  iex> JsonPtr.flat_map(ptr, %{"foo" => ["bar", "baz"]}, fn ptr, data -> [{JsonPtr.to_path(ptr), data}] end)
+  [{"/foo/0", "bar"}, {"/foo/1", "baz"}]
+  ```
+  """
+  def flat_map(pointer, data, fun) do
+    case resolve_json(data, pointer) do
+      {:ok, map} when is_map(map) ->
+        Enum.flat_map(map, fn {key, value} -> fun.(join(pointer, key), value) end)
+
+      {:ok, list} when is_list(list) ->
+        list
+        |> Enum.with_index(fn value, index -> fun.(join(pointer, "#{index}"), value) end)
+        |> Enum.flat_map(&Function.identity/1)
+
+      {:error, _} ->
+        []
+    end
+  end
+
   @spec map(t, json, (t, json -> result)) :: [result] when result: term
   @doc """
   Performs a map operation on the JSON data at the given pointer, analogous

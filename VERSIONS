@@ -37,3 +37,7 @@
 ## 1.1.0
 
 - adds `map`, `each` and `reduce` functions
+
+## 1.2.0
+
+- adds `flat_map` function
