@@ -119,7 +119,11 @@ defmodule JsonPtr do
 
   @spec resolve_json!(data :: json(), t | String.t()) :: json()
   @doc """
-  given some JSON data, resolves a the content pointed to by the JsonPtr
+  given some JSON data, resolves the content pointed to by the JsonPtr.
+
+  > #### Note {: .info}
+  >
+  > the json pointer is the *second* parameter to this function.
 
   ```elixir
   iex> JsonPtr.resolve_json!(true, "/")
@@ -139,7 +143,11 @@ defmodule JsonPtr do
 
   @spec resolve_json(data :: json(), t | String.t()) :: {:ok, json()} | {:error, String.t()}
   @doc """
-  given some JSON data, resolves a the content pointed to by the JsonPtr.
+  given some JSON data, resolves the content pointed to by the JsonPtr.
+
+  > #### Note {: .info}
+  >
+  > the json pointer is the *second* parameter to this function.
 
   ```elixir
   iex> JsonPtr.resolve_json(true, "/")
@@ -329,5 +337,99 @@ defmodule JsonPtr do
   def pop(pointer) do
     [last | rest] = Enum.reverse(pointer)
     {Enum.reverse(rest), last}
+  end
+
+  @spec map(t, json, (t, json -> result)) :: [result] when result: term
+  @doc """
+  Performs a map operation on the JSON data at the given pointer, analogous
+  to `Enum.map/2`.
+
+  The iterator function will be passed the updated pointer *and* the data at
+  that pointer.
+
+  ```elixir
+  iex> ptr = JsonPtr.from_path("/foo")
+  iex> JsonPtr.map(ptr, %{"foo" => %{"bar" => "baz"}}, fn ptr, data -> {JsonPtr.to_path(ptr), data} end)
+  [{"/foo/bar", "baz"}]
+  iex> JsonPtr.map(ptr, %{"foo" => ["bar", "baz"]}, fn ptr, data -> {JsonPtr.to_path(ptr), data} end)
+  [{"/foo/0", "bar"}, {"/foo/1", "baz"}]
+  ```
+  """
+  def map(pointer, data, fun) do
+    case resolve_json(data, pointer) do
+      {:ok, map} when is_map(map) ->
+        Enum.map(map, fn {key, value} -> fun.(join(pointer, key), value) end)
+
+      {:ok, list} when is_list(list) ->
+        Enum.with_index(list, fn value, index -> fun.(join(pointer, "#{index}"), value) end)
+
+      {:error, _} ->
+        []
+    end
+  end
+
+  @spec each(t, json, (t, json -> any)) :: :ok
+  @doc """
+  Performs a each operation on the JSON data at the given pointer, analogous
+  to `Enum.each/2`.  Returns `:ok` when all iterations are complete
+
+  The iterator function will be passed the updated pointer *and* the data at
+  that pointer.
+
+  ```elixir
+  iex> ptr = JsonPtr.from_path("/foo")
+  iex> JsonPtr.each(ptr, %{"foo" => ["bar", "baz"]}, fn ptr, data -> send(self(), {JsonPtr.to_path(ptr), data}) end)
+  :ok
+  iex> receive do data -> data end
+  {"/foo/0", "bar"}
+  iex> receive do data -> data end
+  {"/foo/1", "baz"}
+  ```
+  """
+  def each(pointer, data, fun) do
+    case resolve_json(data, pointer) do
+      {:ok, map} when is_map(map) ->
+        Enum.each(map, fn {key, value} -> fun.(join(pointer, key), value) end)
+
+      {:ok, list} when is_list(list) ->
+        Enum.with_index(list, fn value, index -> fun.(join(pointer, "#{index}"), value) end)
+        :ok
+
+      {:error, _} ->
+        :ok
+    end
+  end
+
+  @spec reduce(t, json, acc, (t, json, acc -> acc)) :: acc when acc: term
+  @doc """
+  Performs a reduction operation on the JSON data at the given pointer, analogous
+  to `Enum.reduce/3`.
+
+  The iterator function will be passed the updated pointer, the data *and* the accumulator at
+  that pointer.
+
+  ```elixir
+  iex> ptr = JsonPtr.from_path("/foo")
+  iex> JsonPtr.reduce(ptr, %{"foo" => %{"bar" => "baz"}}, %{}, &Map.put(&3, JsonPtr.to_path(&1), &2))
+  %{"/foo/bar" => "baz"}
+  iex> JsonPtr.reduce(ptr, %{"foo" => ["bar", "baz"]}, %{}, &Map.put(&3, JsonPtr.to_path(&1), &2))
+  %{"/foo/0" => "bar", "/foo/1" => "baz"}
+  ```
+  """
+  def reduce(pointer, data, acc, fun) do
+    case resolve_json(data, pointer) do
+      {:ok, map} when is_map(map) ->
+        Enum.reduce(map, acc, fn {key, value}, acc -> fun.(join(pointer, key), value, acc) end)
+
+      {:ok, list} when is_list(list) ->
+        list
+        |> Enum.reduce({acc, 0}, fn value, {acc, index} ->
+          {fun.(join(pointer, "#{index}"), value, acc), index + 1}
+        end)
+        |> elem(0)
+
+      {:error, _} ->
+        acc
+    end
   end
 end

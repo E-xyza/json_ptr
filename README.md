@@ -9,7 +9,7 @@ The package can be installed by adding `json_ptr` to your list of dependencies i
 ```elixir
 def deps do
   [
-    {:json_ptr, "~> 1.0.0"}
+    {:json_ptr, "~> 1.1.0"}
   ]
 end
 ```

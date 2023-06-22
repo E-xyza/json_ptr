@@ -33,3 +33,7 @@
 ## 1.0.0
 
 - changes namespace to JsonPtr and repoints github
+
+## 1.1.0
+
+- adds `map`, `each` and `reduce` functions
