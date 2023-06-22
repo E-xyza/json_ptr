@@ -365,8 +365,15 @@ defmodule JsonPtr do
         |> Enum.with_index(fn value, index -> fun.(join(pointer, "#{index}"), value) end)
         |> Enum.flat_map(&Function.identity/1)
 
+      {:ok, _} ->
+        raise ArgumentError,
+          message:
+            "the JSONPointer #{inspect(path(pointer))} does not point to a JSON object or array"
+
       {:error, _} ->
-        []
+        raise ArgumentError,
+          message:
+            "the JSONPointer #{inspect(path(pointer))} does not point to a valid location in the JSON data"
     end
   end
 
@@ -394,8 +401,15 @@ defmodule JsonPtr do
       {:ok, list} when is_list(list) ->
         Enum.with_index(list, fn value, index -> fun.(join(pointer, "#{index}"), value) end)
 
+      {:ok, _} ->
+        raise ArgumentError,
+          message:
+            "the JSONPointer #{inspect(path(pointer))} does not point to a JSON object or array"
+
       {:error, _} ->
-        []
+        raise ArgumentError,
+          message:
+            "the JSONPointer #{inspect(path(pointer))} does not point to a valid location in the JSON data"
     end
   end
 
@@ -426,8 +440,15 @@ defmodule JsonPtr do
         Enum.with_index(list, fn value, index -> fun.(join(pointer, "#{index}"), value) end)
         :ok
 
+      {:ok, _} ->
+        raise ArgumentError,
+          message:
+            "the JSONPointer #{inspect(path(pointer))} does not point to a JSON object or array"
+
       {:error, _} ->
-        :ok
+        raise ArgumentError,
+          message:
+            "the JSONPointer #{inspect(path(pointer))} does not point to a valid location in the JSON data"
     end
   end
 
@@ -459,8 +480,15 @@ defmodule JsonPtr do
         end)
         |> elem(0)
 
+      {:ok, _} ->
+        raise ArgumentError,
+          message:
+            "the JSONPointer #{inspect(path(pointer))} does not point to a JSON object or array"
+
       {:error, _} ->
-        acc
+        raise ArgumentError,
+          message:
+            "the JSONPointer #{inspect(path(pointer))} does not point to a valid location in the JSON data"
     end
   end
 end
