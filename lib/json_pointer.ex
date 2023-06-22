@@ -340,9 +340,14 @@ defmodule JsonPtr do
   end
 
   @spec flat_map(t, json, (t, json -> [result])) :: [result] when result: term
+  @spec flat_map(t, json, (t, pos_integer | String.t(), json -> [result])) :: [result]
+        when result: term
   @doc """
   Performs a flat_map operation on the JSON data at the given pointer, analogous
   to `Enum.flat_map/2`.
+
+  If you pass an arity 3 function, it will also pass the key (or index) of the data
+  in addition to the JsonPtr.
 
   The iterator function will be passed the updated pointer *and* the data at
   that pointer.
@@ -357,12 +362,20 @@ defmodule JsonPtr do
   """
   def flat_map(pointer, data, fun) do
     case resolve_json(data, pointer) do
-      {:ok, map} when is_map(map) ->
+      {:ok, map} when is_map(map) and is_function(fun, 2) ->
         Enum.flat_map(map, fn {key, value} -> fun.(join(pointer, key), value) end)
 
-      {:ok, list} when is_list(list) ->
+      {:ok, list} when is_list(list) and is_function(fun, 2) ->
         list
         |> Enum.with_index(fn value, index -> fun.(join(pointer, "#{index}"), value) end)
+        |> Enum.flat_map(&Function.identity/1)
+
+      {:ok, map} when is_map(map) and is_function(fun, 3) ->
+        Enum.flat_map(map, fn {key, value} -> fun.(join(pointer, key), key, value) end)
+
+      {:ok, list} when is_list(list) and is_function(fun, 3) ->
+        list
+        |> Enum.with_index(fn value, index -> fun.(join(pointer, "#{index}"), index, value) end)
         |> Enum.flat_map(&Function.identity/1)
 
       {:ok, _} ->
@@ -378,28 +391,42 @@ defmodule JsonPtr do
   end
 
   @spec map(t, json, (t, json -> result)) :: [result] when result: term
+  @spec map(t, json, (t, pos_integer | String.t(), json -> result)) :: [result] when result: term
   @doc """
   Performs a map operation on the JSON data at the given pointer, analogous
   to `Enum.map/2`.
+
+  If you pass an arity 3 function, it will also pass the key (or index) of the data
+  in addition to the JsonPtr.
 
   The iterator function will be passed the updated pointer *and* the data at
   that pointer.
 
   ```elixir
   iex> ptr = JsonPtr.from_path("/foo")
-  iex> JsonPtr.map(ptr, %{"foo" => %{"bar" => "baz"}}, fn ptr, data -> {JsonPtr.to_path(ptr), data} end)
+  iex> JsonPtr.map(ptr, %{"foo" => %{"bar" => "baz"}}, &{JsonPtr.to_path(&1), &2})
   [{"/foo/bar", "baz"}]
-  iex> JsonPtr.map(ptr, %{"foo" => ["bar", "baz"]}, fn ptr, data -> {JsonPtr.to_path(ptr), data} end)
+  iex> JsonPtr.map(ptr, %{"foo" => ["bar", "baz"]}, &{JsonPtr.to_path(&1), &2})
   [{"/foo/0", "bar"}, {"/foo/1", "baz"}]
+  iex> JsonPtr.map(ptr, %{"foo" => %{"bar" => "baz"}}, &{JsonPtr.to_path(&1), &2, &3})
+  [{"/foo/bar", "bar", "baz"}]
+  iex> JsonPtr.map(ptr, %{"foo" => ["bar", "baz"]}, &{JsonPtr.to_path(&1), &2, &3})
+  [{"/foo/0", 0, "bar"}, {"/foo/1", 1, "baz"}]
   ```
   """
   def map(pointer, data, fun) do
     case resolve_json(data, pointer) do
-      {:ok, map} when is_map(map) ->
+      {:ok, map} when is_map(map) and is_function(fun, 2) ->
         Enum.map(map, fn {key, value} -> fun.(join(pointer, key), value) end)
 
-      {:ok, list} when is_list(list) ->
+      {:ok, list} when is_list(list) and is_function(fun, 2) ->
         Enum.with_index(list, fn value, index -> fun.(join(pointer, "#{index}"), value) end)
+
+      {:ok, map} when is_map(map) and is_function(fun, 3) ->
+        Enum.map(map, fn {key, value} -> fun.(join(pointer, key), key, value) end)
+
+      {:ok, list} when is_list(list) and is_function(fun, 3) ->
+        Enum.with_index(list, fn value, index -> fun.(join(pointer, "#{index}"), index, value) end)
 
       {:ok, _} ->
         raise ArgumentError,
@@ -414,30 +441,47 @@ defmodule JsonPtr do
   end
 
   @spec each(t, json, (t, json -> any)) :: :ok
+  @spec each(t, json, (t, pos_integer | String.t(), json -> any)) :: :ok
   @doc """
   Performs a each operation on the JSON data at the given pointer, analogous
   to `Enum.each/2`.  Returns `:ok` when all iterations are complete
+
+  If you pass an arity 3 function, it will also pass the key (or index) of the data
+  in addition to the JsonPtr.
 
   The iterator function will be passed the updated pointer *and* the data at
   that pointer.
 
   ```elixir
   iex> ptr = JsonPtr.from_path("/foo")
-  iex> JsonPtr.each(ptr, %{"foo" => ["bar", "baz"]}, fn ptr, data -> send(self(), {JsonPtr.to_path(ptr), data}) end)
+  iex> JsonPtr.each(ptr, %{"foo" => ["bar", "baz"]}, &send(self(), {JsonPtr.to_path(&1), &2}))
   :ok
   iex> receive do data -> data end
   {"/foo/0", "bar"}
   iex> receive do data -> data end
   {"/foo/1", "baz"}
+  iex> JsonPtr.each(ptr, %{"foo" => ["bar", "baz"]}, &send(self(), {JsonPtr.to_path(&1), &2, &3}))
+  :ok
+  iex> receive do data -> data end
+  {"/foo/0", 0, "bar"}
+  iex> receive do data -> data end
+  {"/foo/1", 1, "baz"}
   ```
   """
   def each(pointer, data, fun) do
     case resolve_json(data, pointer) do
-      {:ok, map} when is_map(map) ->
+      {:ok, map} when is_map(map) and is_function(fun, 2) ->
         Enum.each(map, fn {key, value} -> fun.(join(pointer, key), value) end)
 
-      {:ok, list} when is_list(list) ->
+      {:ok, list} when is_list(list) and is_function(fun, 2) ->
         Enum.with_index(list, fn value, index -> fun.(join(pointer, "#{index}"), value) end)
+        :ok
+
+      {:ok, map} when is_map(map) and is_function(fun, 3) ->
+        Enum.each(map, fn {key, value} -> fun.(join(pointer, key), key, value) end)
+
+      {:ok, list} when is_list(list) and is_function(fun, 3) ->
+        Enum.with_index(list, fn value, index -> fun.(join(pointer, "#{index}"), index, value) end)
         :ok
 
       {:ok, _} ->
@@ -453,9 +497,14 @@ defmodule JsonPtr do
   end
 
   @spec reduce(t, json, acc, (t, json, acc -> acc)) :: acc when acc: term
+  @spec reduce(t, json, acc, (t, pos_integer | String.t(), json, acc -> acc)) :: acc
+        when acc: term
   @doc """
   Performs a reduction operation on the JSON data at the given pointer, analogous
   to `Enum.reduce/3`.
+
+  If you pass an arity 4 function, it will also pass the key (or index) of the data
+  in addition to the JsonPtr.
 
   The iterator function will be passed the updated pointer, the data *and* the accumulator at
   that pointer.
@@ -466,17 +515,33 @@ defmodule JsonPtr do
   %{"/foo/bar" => "baz"}
   iex> JsonPtr.reduce(ptr, %{"foo" => ["bar", "baz"]}, %{}, &Map.put(&3, JsonPtr.to_path(&1), &2))
   %{"/foo/0" => "bar", "/foo/1" => "baz"}
+  iex> JsonPtr.reduce(ptr, %{"foo" => %{"bar" => "baz"}}, %{}, &Map.put(&4, {JsonPtr.to_path(&1), &2}, &3))
+  %{{"/foo/bar", "bar"} => "baz"}
+  iex> JsonPtr.reduce(ptr, %{"foo" => ["bar", "baz"]}, %{}, &Map.put(&4, {JsonPtr.to_path(&1), &2}, &3))
+  %{{"/foo/0", 0} => "bar", {"/foo/1", 1}=> "baz"}
   ```
   """
   def reduce(pointer, data, acc, fun) do
     case resolve_json(data, pointer) do
-      {:ok, map} when is_map(map) ->
+      {:ok, map} when is_map(map) and is_function(fun, 3) ->
         Enum.reduce(map, acc, fn {key, value}, acc -> fun.(join(pointer, key), value, acc) end)
 
-      {:ok, list} when is_list(list) ->
+      {:ok, list} when is_list(list) and is_function(fun, 3) ->
         list
         |> Enum.reduce({acc, 0}, fn value, {acc, index} ->
           {fun.(join(pointer, "#{index}"), value, acc), index + 1}
+        end)
+        |> elem(0)
+
+      {:ok, map} when is_map(map) and is_function(fun, 4) ->
+        Enum.reduce(map, acc, fn {key, value}, acc ->
+          fun.(join(pointer, key), key, value, acc)
+        end)
+
+      {:ok, list} when is_list(list) and is_function(fun, 4) ->
+        list
+        |> Enum.reduce({acc, 0}, fn value, {acc, index} ->
+          {fun.(join(pointer, "#{index}"), index, value, acc), index + 1}
         end)
         |> elem(0)
 
