@@ -396,11 +396,11 @@ defmodule JsonPtr do
   Performs a map operation on the JSON data at the given pointer, analogous
   to `Enum.map/2`.
 
-  If you pass an arity 3 function, it will also pass the key (or index) of the data
-  in addition to the JsonPtr.
-
   The iterator function will be passed the updated pointer *and* the data at
   that pointer.
+
+  If you pass an arity 3 function, it will also pass the key (or index) of the
+  data in addition to the JsonPtr.
 
   ```elixir
   iex> ptr = JsonPtr.from_path("/foo")
@@ -446,12 +446,11 @@ defmodule JsonPtr do
   Performs a each operation on the JSON data at the given pointer, analogous
   to `Enum.each/2`.  Returns `:ok` when all iterations are complete
 
-  If you pass an arity 3 function, it will also pass the key (or index) of the data
-  in addition to the JsonPtr.
-
   The iterator function will be passed the updated pointer *and* the data at
   that pointer.
 
+  If you pass an arity 3 function, it will also pass the key (or index) of the
+  data in addition to the JsonPtr.
   ```elixir
   iex> ptr = JsonPtr.from_path("/foo")
   iex> JsonPtr.each(ptr, %{"foo" => ["bar", "baz"]}, &send(self(), {JsonPtr.to_path(&1), &2}))
@@ -500,15 +499,15 @@ defmodule JsonPtr do
   @spec reduce(t, json, acc, (t, pos_integer | String.t(), json, acc -> acc)) :: acc
         when acc: term
   @doc """
-  Performs a reduction operation on the JSON data at the given pointer, analogous
-  to `Enum.reduce/3`.
+  Performs a reduction operation on the JSON data at the given pointer,
+  analogous to `Enum.reduce/3`.
 
-  If you pass an arity 4 function, it will also pass the key (or index) of the data
-  in addition to the JsonPtr.
+  The iterator function will be passed the updated pointer, the data *and* the
+  accumulator at that pointer.
 
-  The iterator function will be passed the updated pointer, the data *and* the accumulator at
-  that pointer.
-
+  If you pass an arity 4 function, it will also pass the key (or index) of the
+  data in addition to the JsonPtr.
+  
   ```elixir
   iex> ptr = JsonPtr.from_path("/foo")
   iex> JsonPtr.reduce(ptr, %{"foo" => %{"bar" => "baz"}}, %{}, &Map.put(&3, JsonPtr.to_path(&1), &2))
