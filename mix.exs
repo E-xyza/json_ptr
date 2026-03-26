@@ -4,7 +4,7 @@ defmodule JsonPtr.MixProject do
   def project do
     [
       app: :json_ptr,
-      version: "1.2.0",
+      version: "1.3.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       package: [
@@ -27,10 +27,10 @@ defmodule JsonPtr.MixProject do
 
   defp deps do
     [
-      {:jason, "~> 1.4.0"},
+      {:jason, "~> 1.4.0", optional: true},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
-      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.2.0", only: :dev}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: :dev}
     ]
   end
 end

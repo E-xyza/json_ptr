@@ -15,6 +15,8 @@ defmodule JsonPtr do
   > may change in the future.
   """
 
+  @json if Code.ensure_loaded?(JSON), do: JSON, else: Jason
+
   @opaque t :: [String.t()]
 
   @type json :: nil | boolean | String.t() | number | [json] | %{optional(String.t()) => json}
@@ -111,7 +113,7 @@ defmodule JsonPtr do
   ```
   """
   def to_uri(pointer) do
-    %URI{fragment: to_path(pointer)}
+    URI.parse("#" <> to_path(pointer))
   end
 
   # placeholder in case we change this to be more sophisticated
@@ -191,11 +193,11 @@ defmodule JsonPtr do
     else
       :bad_index ->
         {:error,
-         "array at `#{path(pointer_rev)}` of #{Jason.encode!(src)} does not have an item at index #{leaf}"}
+         "array at `#{path(pointer_rev)}` of #{@json.encode!(src)} does not have an item at index #{leaf}"}
 
       _ ->
         {:error,
-         "array at `#{path(pointer_rev)}` of #{Jason.encode!(src)} cannot access with non-numerical value #{leaf}"}
+         "array at `#{path(pointer_rev)}` of #{@json.encode!(src)} cannot access with non-numerical value #{leaf}"}
     end
   end
 
@@ -210,7 +212,7 @@ defmodule JsonPtr do
 
       _ ->
         {:error,
-         "object at `#{path(pointer_rev)}` of #{Jason.encode!(src)} cannot access with key `#{leaf}`"}
+         "object at `#{path(pointer_rev)}` of #{@json.encode!(src)} cannot access with key `#{leaf}`"}
     end
   end
 
@@ -481,6 +483,7 @@ defmodule JsonPtr do
 
       {:ok, list} when is_list(list) and is_function(fun, 3) ->
         Enum.with_index(list, fn value, index -> fun.(join(pointer, "#{index}"), index, value) end)
+
         :ok
 
       {:ok, _} ->
@@ -507,7 +510,7 @@ defmodule JsonPtr do
 
   If you pass an arity 4 function, it will also pass the key (or index) of the
   data in addition to the JsonPtr.
-  
+
   ```elixir
   iex> ptr = JsonPtr.from_path("/foo")
   iex> JsonPtr.reduce(ptr, %{"foo" => %{"bar" => "baz"}}, %{}, &Map.put(&3, JsonPtr.to_path(&1), &2))

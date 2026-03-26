@@ -41,3 +41,8 @@
 ## 1.2.0
 
 - adds `flat_map` function
+
+## 1.3.0
+
+- makes Jason an optional dependency
+- uses built-in JSON module (Elixir 1.18+) with Jason as fallback
